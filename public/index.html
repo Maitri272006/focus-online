@@ -607,10 +607,19 @@ document.addEventListener('submit',e=>{
   if(e.target.id==='enqForm'){e.preventDefault();const d=new FormData(e.target),err=$('#enqErr');
     if(['parent','email','phone','country','child'].some(k=>!String(d.get(k)||'').trim())){err.hidden=false;err.textContent='Please add your name, email, WhatsApp, country and your child\'s name so we can reach you.';return}
     if(!/^\S+@\S+\.\S+$/.test(d.get('email'))){err.hidden=false;err.textContent='That email address looks incomplete.';return}
-    $('#enqBox').innerHTML=`<div class="card thanks"><span class="eyebrow">Enquiry ready</span><h3>Thank you, ${esc(d.get('parent'))}!</h3>
-      <p>${esc(d.get('child'))}${d.get('grade')?' · '+esc(d.get('grade')):''} · ${esc(d.get('country'))}${d.get('subj')?' · '+esc(d.get('subj')):''}</p>
-      <div class="pnote">This is a preview, so the enquiry was not sent. On the live site, we'll WhatsApp ${esc(d.get('phone'))} within a day.</div></div>`;
-    const r=e.target.getBoundingClientRect?.();burst(innerWidth/2,innerHeight/2)}
+    const FORM='https://docs.google.com/forms/d/e/1FAIpQLSc56norRiA1mJ1EZ0z80bVaFRed9W7T5froO1WDhlyjIUYPZw/formResponse';
+    const MAP={parent:'entry.1937730511',email:'entry.1170448307',phone:'entry.573329556',country:'entry.290468158',child:'entry.1930517785',grade:'entry.1701392147',subj:'entry.610212386',board:'entry.540179360',format:'entry.538931523',time:'entry.1816943640',msg:'entry.555250313'};
+    const body=new URLSearchParams();Object.entries(MAP).forEach(([k,id])=>{const v=String(d.get(k)||'').trim();if(v)body.append(id,v)});
+    const btn=e.target.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='Sending…';
+    fetch(FORM,{method:'POST',mode:'no-cors',body}).then(()=>{
+      const wa='https://wa.me/917347258546?text='+encodeURIComponent(`Hi! I just sent an enquiry on your website for my child ${d.get('child')}${d.get('grade')?' ('+d.get('grade')+')':''} in ${d.get('country')}.`);
+      $('#enqBox').innerHTML=`<div class="card thanks"><span class="eyebrow">Enquiry sent</span><h3>Thank you, ${esc(d.get('parent'))}!</h3>
+        <p>${esc(d.get('child'))}${d.get('grade')?' · '+esc(d.get('grade')):''} · ${esc(d.get('country'))}${d.get('subj')?' · '+esc(d.get('subj')):''}</p>
+        <p>We'll reach out on WhatsApp at <strong>${esc(d.get('phone'))}</strong> within a day to plan your free demo class.</p>
+        <a class="btn gold" href="${wa}" target="_blank" rel="noopener">Message us on WhatsApp now</a></div>`;
+      burst(innerWidth/2,innerHeight/2);
+    }).catch(()=>{btn.disabled=false;btn.textContent='Send enquiry';err.hidden=false;err.textContent='Could not send. Check your internet connection and try again, or message us on WhatsApp.'});
+  }
 });
 </script>
 
