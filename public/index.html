@@ -272,6 +272,23 @@ form.f{padding:26px;display:grid;grid-template-columns:1fr 1fr;gap:15px}
 .f textarea{min-height:84px;resize:vertical}
 .f .hint{font-weight:400;color:var(--soft);font-size:.8rem}
 .err{color:#c03221;font-size:.88rem;font-weight:600}
+.tlink{margin:0;font-size:.92rem;color:var(--on-navy-soft)}
+.tlink button,.flink{background:none;border:0;padding:0;font:inherit;color:var(--gold);font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.tp{background:var(--paper);border-radius:14px;padding:16px;display:grid;gap:14px;color:var(--ink)}
+.tp-head{display:flex;gap:12px;align-items:center;background:var(--navy-deep);color:#fff;border-radius:12px;padding:14px}
+.tp-head small{color:var(--gold);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.12em}
+.tp-head h3{color:#fff;font-size:1.4rem}
+.tp-head span{color:var(--on-navy-soft);font-size:.85rem}
+.tp-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:12px}
+@media(max-width:760px){.tp-grid{grid-template-columns:1fr}}
+.trow{display:grid;grid-template-columns:70px 1fr auto;gap:10px;align-items:center;padding:8px 10px;border-radius:10px;background:var(--paper);font-size:.88rem}
+.trow small{color:var(--soft)}
+.tmarks{display:flex;gap:4px}
+.tmarks button{font:700 .75rem var(--f-body);border:2px solid var(--ink);background:var(--card);border-radius:8px;padding:4px 8px;cursor:pointer}
+.trow[data-st="p"] [data-tmark="p"]{background:var(--mint);color:#fff}
+.trow[data-st="a"] [data-tmark="a"]{background:var(--coral);color:#fff}
+@media(max-width:520px){.trow{grid-template-columns:1fr}}
+.tp-in{font:inherit;color:var(--ink);background:var(--paper);border:2px solid var(--ink);border-radius:10px;padding:9px 11px;width:100%;resize:vertical}
 .cline{margin:0 0 14px;font-size:.92rem;line-height:1.6;color:var(--soft)}
 .cline strong{color:var(--ink)}
 .cline a{color:var(--navy);font-weight:700;white-space:nowrap}
@@ -513,11 +530,12 @@ canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%
       <h2>Ready when you are.</h2>
       <p class="lead">Tell us about your child and we'll plan a free demo class around your time zone.</p>
       <div class="hero-ctas" style="justify-content:center"><a class="btn gold" href="#enquire">Send an enquiry</a><button class="btn line" data-open="login">Student login</button></div>
+      <p class="tlink">Teaching with us? <button type="button" data-open="tlogin">Teacher login</button></p>
     </div>
   </section>
 </main>
 
-<footer><div class="wrap"><span>Online coaching by <strong style="color:#fff">Focus Coaching Classes</strong></span><span>Rated 5/5 on Google · <a href="https://share.google/1LhphciJ2osw2J1xY" target="_blank" rel="noopener">See reviews</a></span></div></footer>
+<footer><div class="wrap"><span>Online coaching by <strong style="color:#fff">Focus Coaching Classes</strong></span><span>Rated 5/5 on Google · <a href="https://share.google/1LhphciJ2osw2J1xY" target="_blank" rel="noopener">See reviews</a> · <button type="button" class="flink" data-open="login">Student login</button> · <button type="button" class="flink" data-open="tlogin">Teacher login</button></span></div></footer>
 <div id="layer"></div>
 <canvas id="confetti" hidden></canvas>
 
@@ -595,6 +613,23 @@ function burst(x,y){
 
 function open(html,wide){$('#layer').innerHTML=`<div class="overlay" data-close><div class="card modal ${wide?'wide':''}" role="dialog" aria-modal="true">${html}</div></div>`;const f=$('#layer input');f&&f.focus()}
 const close=()=>{$('#layer').innerHTML=''};
+function tlogin(msg){open(`<div class="m-head"><h3>Teacher login</h3><button class="btn sm" data-close>Close</button></div>
+  <form class="f" id="tloginForm"><label>Teacher ID<input id="t_id" class="mono" placeholder="FGT-001" autocomplete="username" style="text-transform:uppercase"></label>
+  <label>Password<input id="t_pw" type="password" autocomplete="current-password"></label>${msg?`<p class="err">${esc(msg)}</p>`:''}
+  <button class="btn navy" type="submit">Log in</button></form>
+  <div class="pnote">Preview demo: ID <strong class="mono">TEACH-001</strong>, password <strong class="mono">demo</strong></div>
+  <p style="font-size:.88rem;color:var(--soft)">Teacher accounts are created by the Focus Global team.</p>`)}
+function tpanel(){
+  const rows=[['4:30 PM','Riya','Age 14 · Auckland','Algebra'],['6:00 PM','Arjun','Age 13 · Toronto','Fractions'],['7:30 PM','Sara','Age 15 · London','Quadratics']];
+  return `<div class="tp">
+    <div class="tp-head"><div class="dz-av" style="width:50px;height:50px;font-size:1.3rem">K</div><div><small>Teacher space</small><h3>Hi Kabir!</h3><span>Mathematics · 3 classes today</span></div></div>
+    <div class="tp-grid">
+      <div class="tile"><h4>Today's classes <span>Mark attendance</span></h4>${rows.map(([t,n,m,top])=>`<div class="trow" data-st=""><div><b>${t}</b></div><div><strong>${n}</strong> · ${top}<br><small>${m}</small></div><div class="tmarks"><button type="button" data-tmark="p" aria-pressed="false">Present</button><button type="button" data-tmark="a" aria-pressed="false">Absent</button></div></div>`).join('')}</div>
+      <div class="tile"><h4>Note for Riya's parents</h4><textarea id="tp_note" class="tp-in" rows="3">Cracked word problems on her own today. Next up: simultaneous equations!</textarea>
+        <h4 style="margin-top:6px">Homework</h4><input id="tp_hw" class="tp-in" value="Simultaneous equations, Q1–10">
+        <button class="btn sm gold" type="button" data-tsave style="justify-self:start">Save note</button><small style="color:var(--soft)">Shows on Riya's dashboard and in the parents' weekly update.</small></div>
+    </div></div>`;
+}
 function login(msg){open(`<div class="m-head"><h3>Student login</h3><button class="btn sm" data-close>Close</button></div>
   <form class="f" id="loginForm"><label>Student ID<input id="l_id" class="mono" placeholder="FCC-0001" autocomplete="username" style="text-transform:uppercase"></label>
   <label>Password<input id="l_pw" type="password" autocomplete="current-password"></label>${msg?`<p class="err">${esc(msg)}</p>`:''}
@@ -603,11 +638,17 @@ function login(msg){open(`<div class="m-head"><h3>Student login</h3><button clas
   <p style="font-size:.88rem;color:var(--soft)">No Student ID yet? You get one after registration. <a href="#enquire" data-close style="color:var(--navy);font-weight:700">Send an enquiry</a></p>`)}
 document.addEventListener('click',e=>{
   if(e.target.closest('[data-open="login"]'))return login();
+  if(e.target.closest('[data-open="tlogin"]'))return tlogin();
+  const mk=e.target.closest('[data-tmark]');if(mk){const r=mk.closest('.trow');r.dataset.st=mk.dataset.tmark;r.querySelectorAll('[data-tmark]').forEach(b=>b.setAttribute('aria-pressed',b===mk));return}
+  if(e.target.closest('[data-tsave]')){const b=e.target.closest('[data-tsave]');b.textContent='Saved ✓';setTimeout(()=>b.textContent='Save note',1500);return}
   const c=e.target.closest('[data-close]');if(c&&(e.target===c||c.tagName!=='DIV'))close();
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-copy]');if(!b)return;try{await navigator.clipboard.writeText(b.dataset.copy);b.textContent='Copied'}catch(_){const r=document.createRange();r.selectNodeContents(b.previousElementSibling);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);b.textContent='Selected'}setTimeout(()=>b.textContent='Copy',1600)});
 document.addEventListener('submit',e=>{
+  if(e.target.id==='tloginForm'){e.preventDefault();const id=$('#t_id').value.trim().toUpperCase(),pw=$('#t_pw').value;
+    if(id==='TEACH-001'&&pw==='demo'){open(`<div class="m-head"><h3>Focus Teacher Space</h3><button class="btn sm gold" data-close>Log out</button></div>${tpanel()}`,true)}
+    else tlogin(id?'That Teacher ID or password is incorrect. Teacher logins open soon; try the demo for now.':'Enter your Teacher ID.');return}
   if(e.target.id==='loginForm'){e.preventDefault();const id=$('#l_id').value.trim().toUpperCase(),pw=$('#l_pw').value;
     if(id==='DEMO-001'&&pw==='demo'){open(`<div class="m-head"><h3>My student space</h3><button class="btn sm gold" data-close>Log out</button></div><div class="dash"></div>`,true);renderDash()}
     else login(id?'That Student ID or password is incorrect. Logins open soon; try the demo for now.':'Enter your Student ID.');return}
