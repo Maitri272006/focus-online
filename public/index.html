@@ -526,7 +526,7 @@ const hr=tz=>Number(new Intl.DateTimeFormat('en-GB',{timeZone:tz,hour:'2-digit',
 const fmt=tz=>new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'numeric',minute:'2-digit'}).format(new Date());
 const wkd=tz=>new Intl.DateTimeFormat('en-US',{timeZone:tz,weekday:'short'}).format(new Date());
 const longDay=tz=>new Intl.DateTimeFormat('en-US',{timeZone:tz,weekday:'long',day:'numeric',month:'short'}).format(new Date());
-const good=tz=>{const h=hr(tz),we=['Sat','Sun'].includes(wkd(tz));return we?(h>=8&&h<20):(h>=15&&h<21)};
+const good=tz=>{const h=hr(tz);return h>=10&&h<22};
 let mine=null;
 try{const sv=localStorage.getItem('fcc-country');if(sv&&C[sv])mine=[sv,C[sv]]}catch(_){}
 if(!mine){try{const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;const tzx=tz==='Asia/Calcutta'?'Asia/Kolkata':tz;const k=Object.keys(C).find(k=>C[k]===tzx);mine=[k||tz.split('/').pop().replace(/_/g,' '),tz]}catch(_){mine=['New Zealand','Pacific/Auckland']}}
