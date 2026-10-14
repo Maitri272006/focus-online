@@ -120,7 +120,8 @@ header.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;backgroun
 @media(max-width:420px){.mine{grid-template-columns:1fr}.mine .slot{grid-row:auto;grid-column:1;justify-self:start;margin-top:8px}}
 .zone.home{background:var(--gold-soft);border:2px dashed var(--ink)}
 .sticker{position:absolute;top:-26px;left:-20px;background:var(--coral);color:#fff;font:900 1rem/1 var(--f-display);border:2px solid #000;border-radius:50%;width:100px;height:100px;display:grid;place-items:center;text-align:center;transform:rotate(-14deg);box-shadow:3px 3px 0 #000;padding:10px}
-@media(max-width:960px){.sticker{left:auto;right:-10px;top:-30px;width:84px;height:84px;font-size:.86rem}.clockboard h3{padding-right:84px}.clockboard h3 .live{order:-1}.clockboard h3{justify-content:flex-start;gap:10px;flex-wrap:wrap}}
+.sticker{left:auto;right:-22px;top:-34px}.clockboard h3{padding-right:92px;justify-content:flex-start;gap:10px;flex-wrap:wrap}.clockboard h3 .live{order:-1}
+@media(max-width:960px){.sticker{right:-10px;top:-30px;width:84px;height:84px;font-size:.86rem}.clockboard h3{padding-right:84px}}
 
 
 /* anywhere cloud */
@@ -528,7 +529,7 @@ const longDay=tz=>new Intl.DateTimeFormat('en-US',{timeZone:tz,weekday:'long',da
 const good=tz=>{const h=hr(tz),we=['Sat','Sun'].includes(wkd(tz));return we?(h>=8&&h<20):(h>=15&&h<21)};
 let mine=null;
 try{const sv=localStorage.getItem('fcc-country');if(sv&&C[sv])mine=[sv,C[sv]]}catch(_){}
-if(!mine){try{const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;const k=Object.keys(C).find(k=>C[k]===tz);mine=[k||tz.split('/').pop().replace(/_/g,' '),tz]}catch(_){mine=['New Zealand','Pacific/Auckland']}}
+if(!mine){try{const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;const tzx=tz==='Asia/Calcutta'?'Asia/Kolkata':tz;const k=Object.keys(C).find(k=>C[k]===tzx);mine=[k||tz.split('/').pop().replace(/_/g,' '),tz]}catch(_){mine=['New Zealand','Pacific/Auckland']}}
 function tick(){
   const[n,tz]=mine,ok=good(tz);
   $('#mine').innerHTML=`<span class="where">Your time · ${esc(n)}</span><span class="big">${fmt(tz)}</span><span class="day">${longDay(tz)}</span><span class="slot ${ok?'yes':'no'}">${ok?'<i class="pulse"></i><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Good time<b>for class</b></span>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg><span>Off hours<b>we’ll find a slot</b></span>'}</span>`;
