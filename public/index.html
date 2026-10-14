@@ -272,6 +272,12 @@ form.f{padding:26px;display:grid;grid-template-columns:1fr 1fr;gap:15px}
 .f textarea{min-height:84px;resize:vertical}
 .f .hint{font-weight:400;color:var(--soft);font-size:.8rem}
 .err{color:#c03221;font-size:.88rem;font-weight:600}
+.cline{margin:0 0 14px;font-size:.92rem;line-height:1.6;color:var(--soft)}
+.cline strong{color:var(--ink)}
+.cline a{color:var(--navy);font-weight:700;white-space:nowrap}
+.cline span{color:var(--ink);overflow-wrap:anywhere}
+.sentline{margin:16px 0 0;padding:12px 14px;border-radius:12px;background:var(--mint-soft);border:2px solid var(--ink);font-size:.92rem;display:flex;gap:10px;align-items:flex-start}
+.sentline .ok{flex:none;width:22px;height:22px;border-radius:50%;background:var(--mint);color:#fff;display:grid;place-items:center;font-weight:800;font-size:.8rem}
 .thanks{padding:30px;display:grid;gap:12px;justify-items:start}
 .thanks h3{font-size:1.9rem}
 .pnote{background:var(--gold-soft);border:2px dashed var(--ink);border-radius:10px;padding:10px 12px;font-size:.88rem}
@@ -467,14 +473,9 @@ canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%
         <span class="eyebrow">Let's talk</span>
         <h2 style="margin-top:14px">Tell us about your child. We'll take it from there.</h2>
         <p class="lead" style="margin-top:14px">We'll reach out within a day to plan a free demo class and talk through everything one-on-one.</p>
-        <div class="contact">
-          <div><strong>WhatsApp</strong><a class="mono clink" href="https://wa.me/917347258546" target="_blank" rel="noopener">+91 73472 58546</a></div>
-          <div><strong>WhatsApp</strong><a class="mono clink" href="https://wa.me/919815986098" target="_blank" rel="noopener">+91 98159 86098</a></div>
-          <div><strong>Email</strong><span class="mono">maitribansal.iitd@gmail.com</span><button class="copy" type="button" data-copy="maitribansal.iitd@gmail.com">Copy</button></div>
-          <div><strong>Email</strong><span class="mono">bansal.focus@gmail.com</span><button class="copy" type="button" data-copy="bansal.focus@gmail.com">Copy</button></div>
-        </div>
       </div>
       <div id="enqBox">
+        <p class="cline"><strong>WhatsApp:</strong> <a href="https://wa.me/917347258546" target="_blank" rel="noopener">+91 73472 58546</a>, <a href="https://wa.me/919815986098" target="_blank" rel="noopener">+91 98159 86098</a><br><strong>Email:</strong> <span>maitribansal.iitd@gmail.com</span>, <span>bansal.focus@gmail.com</span></p>
         <form class="card f" id="enqForm" novalidate>
           <label>Parent's name<input id="e_parent" name="parent" autocomplete="name"></label>
           <label>Email<input id="e_email" name="email" type="email" autocomplete="email"></label>
@@ -490,6 +491,7 @@ canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%
           <p class="err full" id="enqErr" hidden></p>
           <div class="full"><button class="btn navy" type="submit" style="width:100%">Send enquiry</button></div>
         </form>
+        <p class="sentline" id="sentLine" hidden></p>
       </div>
     </div>
   </section>
@@ -618,10 +620,12 @@ document.addEventListener('submit',e=>{
     const btn=e.target.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='Sending…';
     fetch(FORM,{method:'POST',mode:'no-cors',body}).then(()=>{
       const wa='https://wa.me/917347258546?text='+encodeURIComponent(`Hi! I just sent an enquiry on your website for my child ${d.get('child')}${d.get('grade')?' ('+d.get('grade')+')':''} in ${d.get('country')}.`);
-      $('#enqBox').innerHTML=`<div class="card thanks"><span class="eyebrow">Enquiry sent</span><h3>Thank you, ${esc(d.get('parent'))}!</h3>
-        <p>${esc(d.get('child'))}${d.get('grade')?' · '+esc(d.get('grade')):''} · ${esc(d.get('country'))}${d.get('subj')?' · '+esc(d.get('subj')):''}</p>
-        <p>We'll reach out on WhatsApp at <strong>${esc(d.get('phone'))}</strong> within a day to plan your free demo class.</p>
-        <a class="btn gold" href="${wa}" target="_blank" rel="noopener">Message us on WhatsApp now</a></div>`;
+      open(`<div class="m-head"><span class="eyebrow">Enquiry sent</span><button class="btn sm" data-close>Close</button></div>
+        <h3 style="font-size:1.7rem">Thank you, ${esc(d.get('parent'))}!</h3>
+        <p>We've received your enquiry for <strong>${esc(d.get('child'))}</strong>. We'll reach out on WhatsApp at <strong>${esc(d.get('phone'))}</strong> within a day to plan your free demo class.</p>
+        <a class="btn gold" href="${wa}" target="_blank" rel="noopener">Message us on WhatsApp now</a>`);
+      const sl=$('#sentLine');sl.hidden=false;sl.innerHTML=`<span class="ok">✓</span><div>Enquiry sent for <strong>${esc(d.get('child'))}</strong>. We'll be in touch within a day. Need to enquire for another child? Just fill the form again.</div>`;
+      e.target.reset();btn.disabled=false;btn.textContent='Send enquiry';err.hidden=true;
       burst(innerWidth/2,innerHeight/2);
     }).catch(()=>{btn.disabled=false;btn.textContent='Send enquiry';err.hidden=false;err.textContent='Could not send. Check your internet connection and try again, or message us on WhatsApp.'});
   }
