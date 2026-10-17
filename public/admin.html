@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Focus Global Admin</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,600..900&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: navy top bar, student list on the left, working panel on the right. Utilitarian; same palette as the public site. */
+:root{color-scheme:light;
+  --paper:#f5f7ff;--card:#fff;--ink:#0e1a38;--soft:#56607c;--line:#dfe3ee;
+  --navy:#12307a;--navy-deep:#0a1a46;--gold:#f5b800;--gold-soft:#fff3c4;
+  --mint:#1fb88f;--mint-soft:#d3f5ea;--coral:#ff6f59;--coral-soft:#ffe1db;--sky-soft:#dde7ff;
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;--f-body:"Instrument Sans","Segoe UI",system-ui,sans-serif;--f-mono:"JetBrains Mono",ui-monospace,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 var(--f-body)}
+h1,h2,h3{font-family:var(--f-display);margin:0;line-height:1.1}
+h2{font-size:1.5rem;font-weight:800}h3{font-size:1.1rem;font-weight:800}
+p{margin:0}
+.mono{font-family:var(--f-mono)}
+.soft{color:var(--soft)}
+.lbl{font:700 .7rem var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--soft)}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font:700 .9rem var(--f-body);padding:9px 16px;border:2px solid var(--ink);border-radius:10px;background:var(--card);color:var(--ink);cursor:pointer;box-shadow:3px 3px 0 var(--ink);white-space:nowrap}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.btn.gold{background:var(--gold)}.btn.navy{background:var(--navy);color:#fff}
+.btn.sm{padding:5px 11px;font-size:.8rem;box-shadow:2px 2px 0 var(--ink)}
+.btn.ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.6);box-shadow:none}
+.btn.danger{color:#b4321f}.btn.danger.arm{background:var(--coral);color:#fff}
+.btn:disabled{opacity:.55;cursor:wait}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--paper);border:1.5px solid #c9d0e2;border-radius:9px;padding:8px 10px;width:100%;min-width:0}
+input:focus,select:focus,textarea:focus{border-color:var(--navy);outline:none}
+textarea{resize:vertical;min-height:58px}
+label{display:grid;gap:4px;font-weight:600;font-size:.82rem;min-width:0}
+.top{background:var(--navy-deep);color:#fff;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top,0px));display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.top .brand{display:flex;align-items:center;gap:10px;font:800 1.15rem var(--f-display)}
+.top .brand img{width:34px;height:34px}
+.top .brand small{font:700 .7rem var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.top .sp{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+.card{background:var(--card);border:2px solid var(--ink);border-radius:16px;padding:18px}
+.loginbox{max-width:380px;margin:12vh auto 0;display:grid;gap:14px}
+.layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:20px;align-items:start}
+@media(max-width:860px){.layout{grid-template-columns:1fr}}
+.list{display:grid;gap:8px}
+.stu{display:grid;gap:2px;text-align:left;border:2px solid var(--line);background:var(--card);border-radius:12px;padding:10px 12px;cursor:pointer;font:inherit;color:inherit}
+.stu[aria-current="true"]{border-color:var(--ink);box-shadow:3px 3px 0 var(--gold)}
+.stu b{font-family:var(--f-display);font-size:1.05rem}
+.stu small{color:var(--soft);font-size:.78rem}
+.panel{display:grid;gap:18px;min-width:0}
+.head{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.chip{font:700 .78rem var(--f-mono);background:var(--sky-soft);color:var(--navy);padding:3px 9px;border-radius:7px}
+.pill{font:700 .72rem var(--f-body);padding:3px 9px;border-radius:99px}
+.pill.ok{background:var(--mint-soft);color:#0d7a5d}.pill.no{background:var(--coral-soft);color:#b4321f}
+.creds{background:var(--gold-soft);border:2px dashed var(--ink);border-radius:14px;padding:14px;display:grid;gap:8px}
+.creds .big{font:700 1.05rem var(--f-mono)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:12px}
+.grid .full{grid-column:1/-1}
+.row-end{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.cls{border:1.5px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:10px;background:var(--card)}
+.cls+.cls{margin-top:10px}
+.cls-top{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.when{display:grid;line-height:1.25}
+.when b{font-family:var(--f-display);font-size:1.02rem}
+.when small{color:var(--soft);font-size:.78rem}
+.st{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+.st button{font:700 .75rem var(--f-body);border:1.5px solid var(--ink);background:var(--card);border-radius:8px;padding:4px 9px;cursor:pointer}
+.st button[aria-pressed="true"][data-s="present"]{background:var(--mint);color:#fff;border-color:var(--mint)}
+.st button[aria-pressed="true"][data-s="absent"]{background:var(--coral);color:#fff;border-color:var(--coral)}
+.st button[aria-pressed="true"][data-s="cancelled"]{background:var(--soft);color:#fff;border-color:var(--soft)}
+.st button[aria-pressed="true"][data-s="scheduled"]{background:var(--sky-soft)}
+details>summary{cursor:pointer;font-weight:700;font-size:.85rem;color:var(--navy)}
+.empty{padding:18px;text-align:center;color:var(--soft);border:2px dashed var(--line);border-radius:12px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-weight:700;z-index:50}
+.err{color:#b4321f;font-weight:600;font-size:.88rem}
+.preview{font-size:.8rem;color:var(--soft)}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><img src="/favicon.png" alt=""><div>Focus Global<br><small>Admin</small></div></div>
+  <div class="sp" id="topBtns" hidden><button class="btn sm ghost" id="pwBtn" type="button">Change password</button><button class="btn sm ghost" id="outBtn" type="button">Log out</button></div>
+</header>
+
+<main class="wrap">
+  <section id="loginView" hidden>
+    <form class="card loginbox" id="loginForm">
+      <h2>Admin login</h2>
+      <p class="soft">Manage students, classes, attendance, notes and homework.</p>
+      <label>Admin password<input id="a_pw" type="password" autocomplete="current-password" required></label>
+      <p class="err" id="loginErr" hidden></p>
+      <button class="btn navy" type="submit">Log in</button>
+    </form>
+  </section>
+
+  <section id="appView" hidden>
+    <div class="layout">
+      <aside class="card" style="display:grid;gap:12px">
+        <div class="head"><h3>Students</h3><button class="btn sm gold" id="addStuBtn" type="button" style="margin-left:auto">+ Add</button></div>
+        <div class="list" id="stuList"></div>
+      </aside>
+      <div class="panel" id="panel"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let TOK=null;try{TOK=localStorage.getItem('fg-admin')}catch(_){}
+const setTok=t=>{TOK=t;try{t?localStorage.setItem('fg-admin',t):localStorage.removeItem('fg-admin')}catch(_){}};
+async function api(path,method='GET',body){
+  const r=await fetch(path,{method,headers:{'content-type':'application/json',...(TOK?{authorization:'Bearer '+TOK}:{})},body:body?JSON.stringify(body):undefined});
+  const j=await r.json().catch(()=>({}));
+  if(r.status===401&&path!=='/api/admin/login'){setTok(null);show();throw new Error('Please log in again.')}
+  if(!r.ok)throw new Error(j.error||'Something went wrong.');
+  return j;
+}
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
+
+/* time helpers: admin works in India time (IST, UTC+5:30) */
+const IST='Asia/Kolkata';
+const istToUtc=(d,t)=>new Date(`${d}T${t}:00+05:30`).toISOString();
+const istDate=u=>new Intl.DateTimeFormat('en-CA',{timeZone:IST,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(u));
+const istTime=u=>new Intl.DateTimeFormat('en-GB',{timeZone:IST,hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(u));
+const fmt=(u,tz)=>new Intl.DateTimeFormat('en-IN',{timeZone:tz,weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}).format(new Date(u));
+const TZS=[['Pacific/Auckland','New Zealand'],['Australia/Sydney','Australia (Sydney/Melbourne)'],['Australia/Brisbane','Australia (Brisbane)'],['Australia/Perth','Australia (Perth)'],['Asia/Singapore','Singapore / Malaysia'],['Asia/Dubai','UAE / Oman'],['Asia/Riyadh','Saudi / Qatar / Kuwait'],['Asia/Kolkata','India'],['Europe/London','UK / Ireland'],['Europe/Berlin','Central Europe'],['America/New_York','US / Canada East'],['America/Chicago','US Central'],['America/Denver','US Mountain'],['America/Los_Angeles','US / Canada West'],['America/Toronto','Canada (Toronto)'],['America/Vancouver','Canada (Vancouver)'],['Africa/Johannesburg','South Africa'],['Africa/Nairobi','Kenya']];
+
+let STU=[],CUR=null,CLS=[],CREDS=null;
+
+function show(){
+  const auth=!!TOK;
+  $('#loginView').hidden=auth;$('#appView').hidden=!auth;$('#topBtns').hidden=!auth;
+  if(auth)loadStudents();else setTimeout(()=>$('#a_pw').focus(),50);
+}
+async function loadStudents(keep){
+  try{const j=await api('/api/admin/students');STU=j.students;if(!keep||!STU.find(s=>s.id===CUR))CUR=CUR&&STU.find(s=>s.id===CUR)?CUR:(STU[0]?.id||null);renderList();await loadClasses()}catch(e){toast(e.message)}
+}
+async function loadClasses(){CLS=CUR?(await api('/api/admin/classes?student='+encodeURIComponent(CUR))).classes:[];renderPanel()}
+function renderList(){
+  $('#stuList').innerHTML=STU.length?STU.map(s=>`<button type="button" class="stu" data-stu="${s.id}" aria-current="${s.id===CUR}"><b>${esc(s.name)}</b><small class="mono">${s.id}</small><small>${s.next?'Next: '+fmt(s.next.start_utc,IST)+' IST':'No upcoming class'}</small></button>`).join(''):'<p class="soft">No students yet.</p>';
+}
+const tzOpts=sel=>TZS.map(([v,l])=>`<option value="${v}" ${v===sel?'selected':''}>${l}</option>`).join('')+(sel&&!TZS.find(t=>t[0]===sel)?`<option value="${esc(sel)}" selected>${esc(sel)}</option>`:'');
+
+function credsBox(){
+  if(!CREDS||CREDS.id!==CUR)return'';
+  const s=STU.find(x=>x.id===CUR)||{name:''};
+  const msg=`Hi! ${s.name}'s Focus Global student login is ready.\n\nWebsite: ${location.origin}\nStudent ID: ${CREDS.id}\nPassword: ${CREDS.password}\n\nClick "Student login" on the website and enter these details.`;
+  return `<div class="creds"><span class="lbl">Login details (shown once, save or share now)</span>
+    <div class="big">ID: ${esc(CREDS.id)} · Password: ${esc(CREDS.password)}</div>
+    <textarea id="credMsg" rows="6" readonly>${esc(msg)}</textarea>
+    <div class="row-end" style="justify-content:flex-start"><button class="btn sm gold" type="button" data-copy="credMsg">Copy WhatsApp message</button><button class="btn sm" type="button" data-hidecreds>Done</button></div></div>`;
+}
+function classCard(c,s){
+  const tz=s.tz||IST;
+  return `<form class="cls" data-cls="${c.id}">
+    <div class="cls-top">
+      <div class="when"><b>${fmt(c.start_utc,IST)} IST</b><small>${esc(s.name)}'s time: ${fmt(c.start_utc,tz)} · ${c.mins} min</small></div>
+      <div><strong>${esc(c.subject)||'Class'}</strong><br><small class="soft">${esc(c.teacher)||'Teacher not set'}</small></div>
+      <div class="st" role="group" aria-label="Attendance">${['scheduled','present','absent','cancelled'].map(k=>`<button type="button" data-s="${k}" aria-pressed="${c.status===k}">${k[0].toUpperCase()+k.slice(1)}</button>`).join('')}</div>
+    </div>
+    <div class="grid">
+      <label>Topic covered<input name="topic" id="tp${c.id}" value="${esc(c.topic)}" placeholder="e.g. Linear equations"></label>
+      <label>Homework<input name="homework" id="hw${c.id}" value="${esc(c.homework)}" placeholder="e.g. Exercise 4.2, Q1–10"></label>
+      <label class="full">Note for student and parents<textarea name="note" id="nt${c.id}" placeholder="What went well, what's next">${esc(c.note)}</textarea></label>
+    </div>
+    <details><summary>Reschedule or edit class</summary><div class="grid" style="margin-top:10px">
+      <label>Date (IST)<input type="date" name="date" id="dt${c.id}" value="${istDate(c.start_utc)}"></label>
+      <label>Time (IST)<input type="time" name="time" id="tm${c.id}" value="${istTime(c.start_utc)}"></label>
+      <label>Minutes<input type="number" name="mins" id="mn${c.id}" min="15" max="240" step="15" value="${c.mins}"></label>
+      <label>Subject<input name="subject" id="sb${c.id}" value="${esc(c.subject)}"></label>
+      <label>Teacher<input name="teacher" id="te${c.id}" value="${esc(c.teacher)}"></label>
+    </div></details>
+    <div class="row-end">${c.homework?`<span class="soft" style="margin-right:auto;font-size:.82rem">Homework ${c.hw_done?'✓ marked done by student':'not done yet'}</span>`:''}<button type="button" class="btn sm danger" data-delcls="${c.id}">Delete</button><button class="btn sm navy" type="submit">Save</button></div>
+  </form>`;
+}
+function renderPanel(){
+  const s=STU.find(x=>x.id===CUR);
+  if(!s){$('#panel').innerHTML='<div class="card empty">Add your first student to begin.</div>';return}
+  const now=Date.now();
+  const up=CLS.filter(c=>new Date(c.start_utc).getTime()+c.mins*6e4>=now);
+  const past=CLS.filter(c=>new Date(c.start_utc).getTime()+c.mins*6e4<now).reverse();
+  const today=istDate(new Date().toISOString());
+  $('#panel').innerHTML=`
+  <div class="card" style="display:grid;gap:14px">
+    <div class="head"><h2>${esc(s.name)}</h2><span class="chip">${s.id}</span><span class="pill ${s.has_pw?'ok':'no'}">${s.has_pw?'Login active':'No password yet'}</span>
+      <button class="btn sm gold" type="button" data-pw style="margin-left:auto">${s.has_pw?'Reset password':'Generate password'}</button></div>
+    ${credsBox()}
+    <form id="profForm" class="grid">
+      <label>Name<input name="name" id="p_name" value="${esc(s.name)}" required></label>
+      <label>Country code<input name="country" id="p_cc" value="${esc(s.country)}" maxlength="2" placeholder="NZ"></label>
+      <label>City<input name="city" id="p_city" value="${esc(s.city)}"></label>
+      <label>Time zone<select name="tz" id="p_tz">${tzOpts(s.tz)}</select></label>
+      <label>Age / grade<input name="grade" id="p_grade" value="${esc(s.grade)}" placeholder="e.g. 14, Year 10"></label>
+      <label>Subjects<input name="subjects" id="p_subj" value="${esc(s.subjects)}"></label>
+      <label>Parent / guardian<input name="guardian" id="p_guard" value="${esc(s.guardian)}"></label>
+      <label>Parent WhatsApp<input name="phone" id="p_phone" value="${esc(s.phone)}"></label>
+      <label>Parent email<input name="email" id="p_email" value="${esc(s.email)}"></label>
+      <label>Main teacher<input name="teacher" id="p_teacher" value="${esc(s.teacher)}"></label>
+      <label class="full">Class link (Google Meet / Zoom) for the Join button<input name="meet_link" id="p_link" value="${esc(s.meet_link)}" placeholder="https://meet.google.com/..."></label>
+      <label class="full">Private notes (only you see these)<textarea name="notes" id="p_notes">${esc(s.notes)}</textarea></label>
+      <div class="row-end full"><button type="button" class="btn sm danger" data-delstu>Delete student</button><button class="btn navy" type="submit">Save profile</button></div>
+    </form>
+  </div>
+
+  <div class="card" style="display:grid;gap:12px">
+    <h3>Schedule classes</h3>
+    <form id="addCls" class="grid">
+      <label>Date (IST)<input type="date" name="date" id="c_date" value="${today}" required></label>
+      <label>Time (IST)<input type="time" name="time" id="c_time" value="12:30" required></label>
+      <label>Minutes<select name="mins" id="c_mins"><option>30</option><option>45</option><option selected>60</option><option>90</option><option>120</option></select></label>
+      <label>Subject<input name="subject" id="c_subj" value="${esc((s.subjects||'').split(',')[0].trim())}" placeholder="e.g. Maths"></label>
+      <label>Teacher<input name="teacher" id="c_teacher" value="${esc(s.teacher)}"></label>
+      <label>Repeat weekly<select name="repeat" id="c_rep"><option value="1">Just once</option><option value="4">4 weeks</option><option value="8">8 weeks</option><option value="12">12 weeks</option></select></label>
+      <p class="preview full" id="c_prev"></p>
+      <div class="row-end full"><button class="btn gold" type="submit">Add class</button></div>
+    </form>
+  </div>
+
+  <div class="card"><div class="head" style="margin-bottom:12px"><h3>Upcoming classes</h3><span class="soft">${up.length}</span></div>
+    ${up.length?up.map(c=>classCard(c,s)).join(''):'<div class="empty">No upcoming classes. Schedule one above.</div>'}</div>
+  <div class="card"><div class="head" style="margin-bottom:12px"><h3>Past classes</h3><span class="soft">${past.length} · mark attendance and add notes</span></div>
+    ${past.length?past.map(c=>classCard(c,s)).join(''):'<div class="empty">No past classes yet.</div>'}</div>`;
+  updPrev();
+}
+function updPrev(){
+  const s=STU.find(x=>x.id===CUR),d=$('#c_date')?.value,t=$('#c_time')?.value;if(!s||!d||!t)return;
+  try{$('#c_prev').textContent=`That is ${fmt(istToUtc(d,t),s.tz||IST)} for ${s.name}.`}catch(_){}
+}
+
+document.addEventListener('input',e=>{if(e.target.id==='c_date'||e.target.id==='c_time')updPrev()});
+document.addEventListener('click',async e=>{
+  const t=e.target;
+  const stu=t.closest('[data-stu]');if(stu){CUR=stu.dataset.stu;CREDS=null;renderList();loadClasses();return}
+  if(t.closest('[data-hidecreds]')){CREDS=null;renderPanel();return}
+  const cp=t.closest('[data-copy]');if(cp){const el=document.getElementById(cp.dataset.copy);try{await navigator.clipboard.writeText(el.value);cp.textContent='Copied ✓'}catch(_){el.select();cp.textContent='Selected, press Ctrl+C'}return}
+  if(t.closest('[data-pw]')){
+    const b=t.closest('[data-pw]');
+    if(STU.find(x=>x.id===CUR)?.has_pw&&!b.classList.contains('arm')){b.classList.add('arm');b.textContent='Confirm: old password stops working';return}
+    try{b.disabled=true;CREDS=await api(`/api/admin/students/${CUR}/password`,'POST');await loadStudents(true)}catch(err){toast(err.message)}return}
+  const st=t.closest('.st button');if(st){
+    const f=st.closest('[data-cls]');try{await api('/api/admin/classes/'+f.dataset.cls,'PATCH',{status:st.dataset.s});f.querySelectorAll('.st button').forEach(x=>x.setAttribute('aria-pressed',x===st));toast('Marked '+st.dataset.s)}catch(err){toast(err.message)}return}
+  const dc=t.closest('[data-delcls]');if(dc){if(!dc.classList.contains('arm')){dc.classList.add('arm');dc.textContent='Confirm delete';return}
+    try{await api('/api/admin/classes/'+dc.dataset.delcls,'DELETE');toast('Class deleted');await loadClasses();loadStudents(true)}catch(err){toast(err.message)}return}
+  const ds=t.closest('[data-delstu]');if(ds){if(!ds.classList.contains('arm')){ds.classList.add('arm');ds.textContent='Confirm: delete student and all classes';return}
+    try{await api('/api/admin/students/'+CUR,'DELETE');CUR=null;CREDS=null;toast('Student deleted');loadStudents()}catch(err){toast(err.message)}return}
+});
+document.addEventListener('submit',async e=>{
+  e.preventDefault();const f=e.target,b=f.querySelector('button[type=submit]');
+  const d=Object.fromEntries(new FormData(f));
+  try{
+    if(b)b.disabled=true;
+    if(f.id==='loginForm'){
+      const j=await api('/api/admin/login','POST',{password:$('#a_pw').value});setTok(j.token);$('#a_pw').value='';$('#loginErr').hidden=true;show();return}
+    if(f.id==='profForm'){await api('/api/admin/students/'+CUR,'PATCH',d);toast('Profile saved');await loadStudents(true);return}
+    if(f.id==='addCls'){const j=await api('/api/admin/classes','POST',{student_id:CUR,start_utc:istToUtc(d.date,d.time),mins:d.mins,subject:d.subject,teacher:d.teacher,repeat:d.repeat});toast(j.added>1?j.added+' classes added':'Class added');await loadStudents(true);return}
+    if(f.id==='newStu'){const j=await api('/api/admin/students','POST',d);CUR=j.id;CREDS=j;await loadStudents(true);return}
+    if(f.id==='pwForm'){const j=await api('/api/admin/password','POST',d);setTok(j.token);toast('Password changed');renderPanel();return}
+    if(f.dataset.cls){const p={topic:d.topic,homework:d.homework,note:d.note,subject:d.subject,teacher:d.teacher,mins:d.mins};if(d.date&&d.time)p.start_utc=istToUtc(d.date,d.time);await api('/api/admin/classes/'+f.dataset.cls,'PATCH',p);toast('Class saved');await loadClasses();return}
+  }catch(err){if(f.id==='loginForm'){$('#loginErr').hidden=false;$('#loginErr').textContent=err.message}else toast(err.message)}
+  finally{if(b)b.disabled=false}
+});
+$('#addStuBtn').onclick=()=>{CREDS=null;$('#panel').innerHTML=`<form class="card grid" id="newStu"><h2 class="full">Add a student</h2>
+  <label>Name<input name="name" id="n_name" required></label>
+  <label>Country code<input name="country" id="n_cc" maxlength="2" placeholder="e.g. NZ, US, GB" required></label>
+  <label>City<input name="city" id="n_city"></label>
+  <label>Time zone<select name="tz" id="n_tz">${tzOpts('')}</select></label>
+  <label>Age / grade<input name="grade" id="n_grade"></label>
+  <label>Subjects<input name="subjects" id="n_subj"></label>
+  <p class="soft full">The Student ID is created automatically: year + country + number, e.g. ${new Date().getFullYear()}NZ002. A password is generated for you to share.</p>
+  <div class="row-end full"><button class="btn gold" type="submit">Create student</button></div></form>`;$('#n_name').focus()};
+$('#outBtn').onclick=()=>{setTok(null);show()};
+$('#pwBtn').onclick=()=>{$('#panel').innerHTML=`<form class="card grid" id="pwForm"><h2 class="full">Change admin password</h2>
+  <label>Current password<input type="password" name="current" id="pw_cur" autocomplete="current-password" required></label>
+  <label>New password (10+ characters)<input type="password" name="next" id="pw_new" autocomplete="new-password" minlength="10" required></label>
+  <div class="row-end full"><button class="btn" type="button" onclick="renderPanel()">Cancel</button><button class="btn navy" type="submit">Change password</button></div></form>`};
+show();
+</script>
+</body>
+</html>

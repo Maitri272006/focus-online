@@ -598,7 +598,7 @@ function dash(){
       <div class="topics"><span>Linear equations</span><span>Ratios</span><span>Plant cells</span><span>Photosynthesis</span></div></div>
   </div></div>`;
 }
-const renderDash=()=>document.querySelectorAll('.dash').forEach(el=>el.innerHTML=dash());
+const renderDash=()=>document.querySelectorAll('.dash:not(.rdash)').forEach(el=>el.innerHTML=dash());
 renderDash();
 setInterval(()=>document.querySelectorAll('[data-cd]').forEach(el=>el.textContent=cd()),30000);
 document.addEventListener('change',e=>{const i=e.target.dataset.hw;if(i==null)return;const h=D.hw[i];h.done=e.target.checked;D.stars+=h.done?h.p:-h.p;const r=e.target.getBoundingClientRect();renderDash();if(h.done)burst(r.left+10,r.top+10)});
@@ -630,14 +630,82 @@ function tpanel(){
         <button class="btn sm gold" type="button" data-tsave style="justify-self:start">Save note</button><small style="color:var(--soft)">Shows on Riya's dashboard and in the parents' weekly update.</small></div>
     </div></div>`;
 }
+/* ---------- real student accounts ---------- */
+let STOK=null;try{STOK=localStorage.getItem('fg-student')}catch(_){}
+const setStok=t=>{STOK=t;try{t?localStorage.setItem('fg-student',t):localStorage.removeItem('fg-student')}catch(_){}};
+let ME=null;
+async function sapi(path,method='GET',body){
+  const r=await fetch(path,{method,headers:{'content-type':'application/json',...(STOK?{authorization:'Bearer '+STOK}:{})},body:body?JSON.stringify(body):undefined});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){if(r.status===401&&path!=='/api/login')setStok(null);throw new Error(j.error||'Something went wrong. Please try again.')}
+  return j;
+}
+async function openMine(){
+  ME=await sapi('/api/me');
+  open(`<div class="m-head"><h3>My student space</h3><button class="btn sm gold" type="button" data-logout>Log out</button></div><div class="dash rdash" id="realDash"></div>`,true);
+  renderReal();
+}
+function renderReal(){
+  const el=$('#realDash');if(!el||!ME)return;
+  const s=ME.student,tz=s.tz||Intl.DateTimeFormat().resolvedOptions().timeZone,now=Date.now();
+  const T=c=>new Date(c.start_utc).getTime();
+  const fD=(t,o)=>new Intl.DateTimeFormat('en-US',{timeZone:tz,...o}).format(new Date(t));
+  const dkey=t=>new Intl.DateTimeFormat('en-CA',{timeZone:tz}).format(new Date(t));
+  const all=ME.classes;
+  const up=all.filter(c=>c.status!=='cancelled'&&T(c)+c.mins*6e4>now);
+  const done=all.filter(c=>c.status==='present');
+  const marked=all.filter(c=>c.status==='present'||c.status==='absent');
+  const att=marked.length?Math.round(done.length*100/marked.length)+'%':'—';
+  const next=up[0];
+  const dayLabel=t=>{const k=dkey(t);return k===dkey(now)?'Today':k===dkey(now+864e5)?'Tomorrow':fD(t,{weekday:'short',day:'numeric'})};
+  // week strip (Sun..Sat in student's time zone)
+  const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(fD(now,{weekday:'short'}));
+  const days=[...Array(7)].map((_,i)=>now+(i-dow)*864e5);
+  const busy=new Set(all.filter(c=>c.status!=='cancelled').map(c=>dkey(T(c))));
+  const weekN=days.filter(d=>busy.has(dkey(d))).length;
+  const notes=all.filter(c=>c.note&&T(c)<=now).sort((a,b)=>T(b)-T(a)).slice(0,2);
+  const hw=all.filter(c=>c.homework).sort((a,b)=>T(b)-T(a)).slice(0,4);
+  const hwLeft=hw.filter(c=>!c.hw_done).length;
+  const topics=[...new Set(done.slice().reverse().map(c=>c.topic).filter(Boolean))].slice(0,6);
+  const badges=[['1','First class',done.length>=1,'var(--gold)','var(--navy-deep)'],['5','5 classes',done.length>=5,'var(--sky)','#fff'],['10','10 classes',done.length>=10,'var(--mint)','#fff'],['✓','Homework Hero',hw.length>0&&hwLeft===0,'var(--coral)','#fff']];
+  const where=[s.grade,s.city,s.country].filter(Boolean).map(esc).join(' · ');
+  const join=s.meet_link?`<a class="btn sm gold" href="${esc(s.meet_link)}" target="_blank" rel="noopener">Join</a>`:`<button class="btn sm gold" type="button" disabled title="Your teacher will add the class link">Join</button>`;
+  el.innerHTML=`<div class="dz">
+  <i class="dz-blob b1"></i><i class="dz-blob b2"></i>
+  <header class="dz-head">
+    <div class="dz-av">${esc(s.name[0]||'?')}</div>
+    <div class="dz-hi"><small>Welcome back</small><h3>Hey ${esc(s.name)}!</h3><span>${where?where+' · ':''}<span class="mono">${esc(s.id)}</span></span></div>
+    <div class="dz-meds"><div class="med m1"><b>${done.length}</b><span>classes done</span></div><div class="med m2"><b>${att}</b><span>attended</span></div></div>
+  </header>
+  <div class="dz-grid">
+    <div class="ticket">${next?`
+      <div class="tk-main"><span class="lbl">Next class · ${T(next)<=now?'happening now':'starts in'}</span><div class="count" data-rcd="${T(next)}">${rcd(T(next))}</div><div class="tk-sub"><strong>${esc(next.subject)||'Class'}</strong>${next.teacher?' with '+esc(next.teacher):''}</div></div>
+      <div class="tk-stub"><span class="lbl">${dayLabel(T(next))}</span><b>${fD(T(next),{hour:'numeric',minute:'2-digit'}).replace(/ ?[AP]M/,'')}</b><span>${fD(T(next),{hour:'numeric'}).slice(-2)} your time</span>${join}</div>`
+      :`<div class="tk-main"><span class="lbl">Next class</span><div class="count" style="font-size:1.8rem">Not booked yet</div><div class="tk-sub">Your teacher will add your schedule soon.</div></div>`}
+    </div>
+    <div class="calpage"><div class="rings"><i></i><i></i><i></i><i></i></div><h4>This week</h4><div class="wk">${days.map(d=>`<span class="${busy.has(dkey(d))?'on':''} ${dkey(d)===dkey(now)?'today':''}">${fD(d,{weekday:'narrow'})}</span>`).join('')}</div><p>${weekN} class day${weekN===1?'':'s'} this week<br>Attendance <b>${att}</b></p></div>
+    <div class="timeline"><h4>Coming up</h4>${up.length>1?`<ol>${up.slice(1,4).map(c=>`<li><span class="dt">${dayLabel(T(c))}</span><strong>${esc(c.subject)||'Class'}</strong>${c.teacher?' with '+esc(c.teacher):''}<small>${fD(T(c),{hour:'numeric',minute:'2-digit'})} your time</small></li>`).join('')}</ol>`:'<p style="margin:0;color:var(--soft)">Nothing else booked yet.</p>'}</div>
+    <div class="notes"><h4>From my teachers</h4>${notes.length?notes.map((c,i)=>`<div class="sticky s${i+1}"><i class="tape"></i><small>${esc(c.teacher||'Teacher')} · ${esc(c.subject||'Class')} · ${fD(T(c),{day:'numeric',month:'short'})}</small><p>${esc(c.note)}</p></div>`).join(''):'<div class="sticky s1"><i class="tape"></i><small>Focus Global</small><p>Notes from your teacher will appear here after each class.</p></div>'}</div>
+    <div class="clip"><i class="clip-top"></i><h4>Homework <span>${hw.length?(hwLeft?hwLeft+' left':'all done!'):''}</span></h4><div class="hw">${hw.length?hw.map(c=>`<label class="${c.hw_done?'done':''}"><input type="checkbox" data-rhw="${c.id}" ${c.hw_done?'checked':''}><span class="tx">${esc(c.homework)}</span><span class="pts">${esc((c.subject||'').slice(0,10))}</span></label>`).join(''):'<p style="margin:0;color:var(--soft)">No homework right now.</p>'}</div></div>
+    <div class="trophy"><h4>Badges</h4><div class="meds2">${badges.map(([t,n,on,bg,fg])=>`<span class="bd ${on?'':'locked'}" style="background:${bg};color:${fg}" title="${n}">${t}</span>`).join('')}</div>
+      <small>${badges.filter(b=>b[2]).length} of ${badges.length} badges earned</small>
+      ${topics.length?`<div class="topics">${topics.map(t=>`<span>${esc(t)}</span>`).join('')}</div>`:''}</div>
+  </div></div>`;
+}
+function rcd(t){const m=Math.max(0,Math.round((t-Date.now())/6e4));if(m<=0)return 'Now';const d=Math.floor(m/1440),h=Math.floor(m%1440/60),mm=m%60;return d?`${d}d ${h}h`:`${h}h ${String(mm).padStart(2,'0')}m`}
+setInterval(()=>document.querySelectorAll('[data-rcd]').forEach(el=>el.textContent=rcd(+el.dataset.rcd)),30000);
+document.addEventListener('change',async e=>{const id=e.target.dataset.rhw;if(!id)return;const c=ME.classes.find(x=>x.id==id);const v=e.target.checked;
+  try{await sapi('/api/me/homework','POST',{classId:+id,done:v});c.hw_done=v?1:0;const r=e.target.getBoundingClientRect();renderReal();if(v)burst(r.left+10,r.top+10)}catch(err){e.target.checked=!v;alertBox(err.message)}});
+function alertBox(m){const t=document.createElement('div');t.className='pnote';t.style.cssText='position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:70';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
 function login(msg){open(`<div class="m-head"><h3>Student login</h3><button class="btn sm" data-close>Close</button></div>
-  <form class="f" id="loginForm"><label>Student ID<input id="l_id" class="mono" placeholder="FCC-0001" autocomplete="username" style="text-transform:uppercase"></label>
+  <form class="f" id="loginForm"><label>Student ID<input id="l_id" class="mono" placeholder="2026NZ001" autocomplete="username" style="text-transform:uppercase"></label>
   <label>Password<input id="l_pw" type="password" autocomplete="current-password"></label>${msg?`<p class="err">${esc(msg)}</p>`:''}
   <button class="btn navy" type="submit">Log in</button></form>
   <div class="pnote">Preview demo: ID <strong class="mono">DEMO-001</strong>, password <strong class="mono">demo</strong></div>
   <p style="font-size:.88rem;color:var(--soft)">No Student ID yet? You get one after registration. <a href="#enquire" data-close style="color:var(--navy);font-weight:700">Send an enquiry</a></p>`)}
 document.addEventListener('click',e=>{
-  if(e.target.closest('[data-open="login"]'))return login();
+  if(e.target.closest('[data-open="login"]')){if(STOK)openMine().catch(()=>login());else login();return}
+  if(e.target.closest('[data-logout]')){setStok(null);ME=null;close();return}
   if(e.target.closest('[data-open="tlogin"]'))return tlogin();
   const mk=e.target.closest('[data-tmark]');if(mk){const r=mk.closest('.trow');r.dataset.st=mk.dataset.tmark;r.querySelectorAll('[data-tmark]').forEach(b=>b.setAttribute('aria-pressed',b===mk));return}
   if(e.target.closest('[data-tsave]')){const b=e.target.closest('[data-tsave]');b.textContent='Saved ✓';setTimeout(()=>b.textContent='Save note',1500);return}
@@ -651,7 +719,10 @@ document.addEventListener('submit',e=>{
     else tlogin(id?'That Teacher ID or password is incorrect. Teacher logins open soon; try the demo for now.':'Enter your Teacher ID.');return}
   if(e.target.id==='loginForm'){e.preventDefault();const id=$('#l_id').value.trim().toUpperCase(),pw=$('#l_pw').value;
     if(id==='DEMO-001'&&pw==='demo'){open(`<div class="m-head"><h3>My student space</h3><button class="btn sm gold" data-close>Log out</button></div><div class="dash"></div>`,true);renderDash()}
-    else login(id?'That Student ID or password is incorrect. Logins open soon; try the demo for now.':'Enter your Student ID.');return}
+    else if(!id||!pw)login('Enter your Student ID and password.');
+    else{const b=e.target.querySelector('button[type=submit]');b.disabled=true;b.textContent='Logging in…';
+      sapi('/api/login','POST',{id,password:pw}).then(j=>{setStok(j.token);return openMine()}).catch(err=>{login(err.message);const i=$('#l_id');if(i)i.value=id})}
+    return}
   if(e.target.id==='enqForm'){e.preventDefault();const d=new FormData(e.target),err=$('#enqErr');
     if(['parent','email','phone','country','child'].some(k=>!String(d.get(k)||'').trim())){err.hidden=false;err.textContent='Please add your name, email, WhatsApp, country and your child\'s name so we can reach you.';return}
     if(!/^\S+@\S+\.\S+$/.test(d.get('email'))){err.hidden=false;err.textContent='That email address looks incomplete.';return}
