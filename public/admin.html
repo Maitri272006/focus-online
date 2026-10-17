@@ -215,7 +215,7 @@ function renderPanel(){
       <label>Minutes<select name="mins" id="c_mins"><option>30</option><option>45</option><option selected>60</option><option>90</option><option>120</option></select></label>
       <label>Subject<input name="subject" id="c_subj" value="${esc((s.subjects||'').split(',')[0].trim())}" placeholder="e.g. Maths"></label>
       <label>Teacher<input name="teacher" id="c_teacher" value="${esc(s.teacher)}"></label>
-      <label>Repeat weekly<select name="repeat" id="c_rep"><option value="1">Just once</option><option value="4">4 weeks</option><option value="8">8 weeks</option><option value="12">12 weeks</option></select></label>
+      <label>How many times?<select name="repeat" id="c_rep"><option value="1">Just this one class</option><option value="4">Every week, for 4 weeks</option><option value="8">Every week, for 8 weeks</option><option value="12">Every week, for 12 weeks</option></select></label>
       <p class="preview full" id="c_prev"></p>
       <div class="row-end full"><button class="btn gold" type="submit">Add class</button></div>
     </form>
