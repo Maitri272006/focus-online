@@ -78,6 +78,16 @@ details>summary{cursor:pointer;font-weight:700;font-size:.85rem;color:var(--navy
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-weight:700;z-index:50}
 .err{color:#b4321f;font-weight:600;font-size:.88rem}
 .preview{font-size:.8rem;color:var(--soft)}
+.tag{font:700 .66rem var(--f-body);letter-spacing:.06em;text-transform:uppercase;background:var(--gold-soft);color:#8a6400;padding:2px 7px;border-radius:6px;vertical-align:middle}
+.slots{display:grid;gap:10px}
+.slot{display:grid;grid-template-columns:1.2fr 1fr .8fr 1.2fr 1.2fr auto;gap:10px;align-items:end;border:1.5px solid var(--line);border-radius:12px;padding:12px;background:var(--paper)}
+.slot-btns{display:flex;gap:6px}
+.slot-note{grid-column:1/-1;margin:0}
+@media(max-width:1000px){.slot{grid-template-columns:repeat(2,minmax(0,1fr))}.slot-btns{grid-column:1/-1}}
+.daychips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.daychips label{display:flex;align-items:center;gap:6px;border:1.5px solid var(--ink);border-radius:99px;padding:6px 12px;cursor:pointer;font-size:.88rem;background:var(--card)}
+.daychips input{width:auto;accent-color:var(--navy)}
+.daychips label:has(input:checked){background:var(--navy);color:#fff}
 </style>
 </head>
 <body>
@@ -130,7 +140,12 @@ const istTime=u=>new Intl.DateTimeFormat('en-GB',{timeZone:IST,hour:'2-digit',mi
 const fmt=(u,tz)=>new Intl.DateTimeFormat('en-IN',{timeZone:tz,weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}).format(new Date(u));
 const TZS=[['Pacific/Auckland','New Zealand'],['Australia/Sydney','Australia (Sydney/Melbourne)'],['Australia/Brisbane','Australia (Brisbane)'],['Australia/Perth','Australia (Perth)'],['Asia/Singapore','Singapore / Malaysia'],['Asia/Dubai','UAE / Oman'],['Asia/Riyadh','Saudi / Qatar / Kuwait'],['Asia/Kolkata','India'],['Europe/London','UK / Ireland'],['Europe/Berlin','Central Europe'],['America/New_York','US / Canada East'],['America/Chicago','US Central'],['America/Denver','US Mountain'],['America/Los_Angeles','US / Canada West'],['America/Toronto','Canada (Toronto)'],['America/Vancouver','Canada (Vancouver)'],['Africa/Johannesburg','South Africa'],['Africa/Nairobi','Kenya']];
 
-let STU=[],CUR=null,CLS=[],CREDS=null;
+let STU=[],CUR=null,CLS=[],SLOTS=[],TODAY='',CREDS=null;
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const ORDER=[1,2,3,4,5,6,0];
+const addD=(d,n)=>new Date(Date.parse(d+'T00:00:00Z')+n*864e5).toISOString().slice(0,10);
+const nextDate=wd=>{const t=TODAY||istDate(new Date().toISOString());return addD(t,(wd-new Date(t+'T00:00:00Z').getUTCDay()+7)%7)};
+const minsOpts=v=>[30,45,60,75,90,120].map(m=>`<option ${+v===m?'selected':''}>${m}</option>`).join('');
 
 function show(){
   const auth=!!TOK;
@@ -140,7 +155,7 @@ function show(){
 async function loadStudents(keep){
   try{const j=await api('/api/admin/students');STU=j.students;if(!keep||!STU.find(s=>s.id===CUR))CUR=CUR&&STU.find(s=>s.id===CUR)?CUR:(STU[0]?.id||null);renderList();await loadClasses()}catch(e){toast(e.message)}
 }
-async function loadClasses(){CLS=CUR?(await api('/api/admin/classes?student='+encodeURIComponent(CUR))).classes:[];renderPanel()}
+async function loadClasses(){if(CUR){const j=await api('/api/admin/schedule?student='+encodeURIComponent(CUR));CLS=j.classes;SLOTS=j.slots;TODAY=j.today}else{CLS=[];SLOTS=[]}renderPanel()}
 function renderList(){
   $('#stuList').innerHTML=STU.length?STU.map(s=>`<button type="button" class="stu" data-stu="${s.id}" aria-current="${s.id===CUR}"><b>${esc(s.name)}</b><small class="mono">${s.id}</small><small>${s.next?'Next: '+fmt(s.next.start_utc,IST)+' IST':'No upcoming class'}</small></button>`).join(''):'<p class="soft">No students yet.</p>';
 }
@@ -155,35 +170,51 @@ function credsBox(){
     <textarea id="credMsg" rows="6" readonly>${esc(msg)}</textarea>
     <div class="row-end" style="justify-content:flex-start"><button class="btn sm gold" type="button" data-copy="credMsg">Copy WhatsApp message</button><button class="btn sm" type="button" data-hidecreds>Done</button></div></div>`;
 }
-function classCard(c,s){
-  const tz=s.tz||IST;
-  return `<form class="cls" data-cls="${c.id}">
+function classCard(c,s,isPast){
+  const tz=s.tz||IST,k=c.key,u=k.replace(/[^a-z0-9]/gi,'');
+  const label=x=>x==='scheduled'?(isPast?'Not marked':'Scheduled'):x[0].toUpperCase()+x.slice(1);
+  return `<form class="cls" data-key="${k}">
     <div class="cls-top">
       <div class="when"><b>${fmt(c.start_utc,IST)} IST</b><small>${esc(s.name)}'s time: ${fmt(c.start_utc,tz)} · ${c.mins} min</small></div>
-      <div><strong>${esc(c.subject)||'Class'}</strong><br><small class="soft">${esc(c.teacher)||'Teacher not set'}</small></div>
-      <div class="st" role="group" aria-label="Attendance">${['scheduled','present','absent','cancelled'].map(k=>`<button type="button" data-s="${k}" aria-pressed="${c.status===k}">${k[0].toUpperCase()+k.slice(1)}</button>`).join('')}</div>
+      <div><strong>${esc(c.subject)||'Class'}</strong> <span class="tag">${c.recurring?'Weekly':'One-off'}</span><br><small class="soft">${esc(c.teacher)||'Teacher not set'}</small></div>
+      <div class="st" role="group" aria-label="Attendance">${['scheduled','present','absent','cancelled'].map(x=>`<button type="button" data-s="${x}" aria-pressed="${c.status===x}">${label(x)}</button>`).join('')}</div>
     </div>
     <div class="grid">
-      <label>Topic covered<input name="topic" id="tp${c.id}" value="${esc(c.topic)}" placeholder="e.g. Linear equations"></label>
-      <label>Homework<input name="homework" id="hw${c.id}" value="${esc(c.homework)}" placeholder="e.g. Exercise 4.2, Q1–10"></label>
-      <label class="full">Note for student and parents<textarea name="note" id="nt${c.id}" placeholder="What went well, what's next">${esc(c.note)}</textarea></label>
+      <label>Topic covered<input name="topic" id="tp${u}" value="${esc(c.topic)}" placeholder="e.g. Linear equations"></label>
+      <label>Homework<input name="homework" id="hw${u}" value="${esc(c.homework)}" placeholder="e.g. Exercise 4.2, Q1–10"></label>
+      <label class="full">Note for student and parents<textarea name="note" id="nt${u}" placeholder="What went well, what's next">${esc(c.note)}</textarea></label>
     </div>
-    <details><summary>Reschedule or edit class</summary><div class="grid" style="margin-top:10px">
-      <label>Date (IST)<input type="date" name="date" id="dt${c.id}" value="${istDate(c.start_utc)}"></label>
-      <label>Time (IST)<input type="time" name="time" id="tm${c.id}" value="${istTime(c.start_utc)}"></label>
-      <label>Minutes<input type="number" name="mins" id="mn${c.id}" min="15" max="240" step="15" value="${c.mins}"></label>
-      <label>Subject<input name="subject" id="sb${c.id}" value="${esc(c.subject)}"></label>
-      <label>Teacher<input name="teacher" id="te${c.id}" value="${esc(c.teacher)}"></label>
+    <details><summary>Move or change just this class</summary><div class="grid" style="margin-top:10px">
+      <label>Date (IST)<input type="date" name="date" id="dt${u}" value="${istDate(c.start_utc)}"></label>
+      <label>Time (IST)<input type="time" name="time" id="tm${u}" value="${istTime(c.start_utc)}"></label>
+      <label>Minutes<input type="number" name="mins" id="mn${u}" min="15" max="240" step="15" value="${c.mins}"></label>
+      <label>Subject<input name="subject" id="sb${u}" value="${esc(c.subject)}"></label>
+      <label>Teacher<input name="teacher" id="te${u}" value="${esc(c.teacher)}"></label>
+      <p class="preview full">${c.recurring?'Changes here affect only this week. To change every week, edit the weekly timetable above.':''}</p>
     </div></details>
-    <div class="row-end">${c.homework?`<span class="soft" style="margin-right:auto;font-size:.82rem">Homework ${c.hw_done?'✓ marked done by student':'not done yet'}</span>`:''}<button type="button" class="btn sm danger" data-delcls="${c.id}">Delete</button><button class="btn sm navy" type="submit">Save</button></div>
+    <div class="row-end">${c.homework?`<span class="soft" style="margin-right:auto;font-size:.82rem">Homework ${c.hw_done?'✓ marked done by student':'not done yet'}</span>`:''}${!c.recurring?`<button type="button" class="btn sm danger" data-delcls="${c.id}">Delete</button>`:''}<button class="btn sm navy" type="submit">Save</button></div>
+  </form>`;
+}
+function slotRow(sl,s){
+  const nd=nextDate(sl.weekday),u=sl.id;
+  return `<form class="slot" data-slot="${sl.id}">
+    <label>Day<select name="weekday" id="sw${u}">${ORDER.map(i=>`<option value="${i}" ${i===sl.weekday?'selected':''}>${DAYS[i]}</option>`).join('')}</select></label>
+    <label>Time (IST)<input type="time" name="time" id="st${u}" value="${sl.time}"></label>
+    <label>Minutes<select name="mins" id="sm${u}">${minsOpts(sl.mins)}</select></label>
+    <label>Subject<input name="subject" id="ss${u}" value="${esc(sl.subject)}"></label>
+    <label>Teacher<input name="teacher" id="stt${u}" value="${esc(sl.teacher)}"></label>
+    <div class="slot-btns"><button class="btn sm navy" type="submit">Save</button><button class="btn sm danger" type="button" data-stopslot="${sl.id}">Stop</button></div>
+    <p class="preview slot-note">${esc(s.name)}: ${new Intl.DateTimeFormat('en-IN',{timeZone:s.tz||IST,weekday:'long',hour:'numeric',minute:'2-digit'}).format(new Date(istToUtc(nd,sl.time)))} her time · every week since ${new Date(sl.start_date+'T00:00:00Z').toLocaleDateString('en-IN',{day:'numeric',month:'short',timeZone:'UTC'})}</p>
   </form>`;
 }
 function renderPanel(){
   const s=STU.find(x=>x.id===CUR);
   if(!s){$('#panel').innerHTML='<div class="card empty">Add your first student to begin.</div>';return}
   const now=Date.now();
-  const up=CLS.filter(c=>new Date(c.start_utc).getTime()+c.mins*6e4>=now);
-  const past=CLS.filter(c=>new Date(c.start_utc).getTime()+c.mins*6e4<now).reverse();
+  const end=c=>new Date(c.start_utc).getTime()+c.mins*6e4;
+  const up=CLS.filter(c=>end(c)>=now&&end(c)<now+15*864e5);
+  const past=CLS.filter(c=>end(c)<now&&(end(c)>now-31*864e5||c.id)).reverse();
+  const active=SLOTS.filter(x=>!x.end_date||x.end_date>=TODAY),ended=SLOTS.filter(x=>x.end_date&&x.end_date<TODAY);
   const today=istDate(new Date().toISOString());
   $('#panel').innerHTML=`
   <div class="card" style="display:grid;gap:14px">
@@ -207,32 +238,46 @@ function renderPanel(){
     </form>
   </div>
 
-  <div class="card" style="display:grid;gap:12px">
-    <h3>Schedule classes</h3>
-    <form id="addCls" class="grid">
-      <label>Date (IST)<input type="date" name="date" id="c_date" value="${today}" required></label>
+  <div class="card" style="display:grid;gap:14px">
+    <div><h3>Weekly timetable</h3><p class="soft" style="font-size:.88rem">Classes repeat every week until you press Stop. Each day can have its own time and length.</p></div>
+    ${active.length?`<div class="slots">${active.slice().sort((a,b)=>ORDER.indexOf(a.weekday)-ORDER.indexOf(b.weekday)||a.time.localeCompare(b.time)).map(x=>slotRow(x,s)).join('')}</div>`:'<div class="empty">No weekly classes yet. Add the days below.</div>'}
+    <form id="addSlot" class="grid addslot">
+      <div class="full"><span class="lbl">Add days</span><div class="daychips">${ORDER.map(i=>`<label><input type="checkbox" name="day" value="${i}">${DAYS[i].slice(0,3)}</label>`).join('')}</div></div>
       <label>Time (IST)<input type="time" name="time" id="c_time" value="12:30" required></label>
-      <label>Minutes<select name="mins" id="c_mins"><option>30</option><option>45</option><option selected>60</option><option>90</option><option>120</option></select></label>
+      <label>Minutes<select name="mins" id="c_mins">${minsOpts(60)}</select></label>
       <label>Subject<input name="subject" id="c_subj" value="${esc((s.subjects||'').split(',')[0].trim())}" placeholder="e.g. Maths"></label>
       <label>Teacher<input name="teacher" id="c_teacher" value="${esc(s.teacher)}"></label>
-      <label>How many times?<select name="repeat" id="c_rep"><option value="1">Just this one class</option><option value="4">Every week, for 4 weeks</option><option value="8">Every week, for 8 weeks</option><option value="12">Every week, for 12 weeks</option></select></label>
+      <label>Starting from<input type="date" name="start_date" id="c_start" value="${today}"></label>
       <p class="preview full" id="c_prev"></p>
-      <div class="row-end full"><button class="btn gold" type="submit">Add class</button></div>
+      <div class="row-end full"><button class="btn gold" type="submit">Add to timetable</button></div>
     </form>
+    ${ended.length?`<details><summary>Stopped timings (${ended.length})</summary><ul class="soft" style="margin:8px 0 0;padding-left:18px;font-size:.85rem">${ended.map(x=>`<li>${DAYS[x.weekday]} ${x.time} IST · ${x.mins} min · ${esc(x.subject)} (${x.start_date} to ${x.end_date})</li>`).join('')}</ul></details>`:''}
+    <details><summary>Add a one-off extra class</summary>
+      <form id="addOne" class="grid" style="margin-top:10px">
+        <label>Date (IST)<input type="date" name="date" id="o_date" value="${today}" required></label>
+        <label>Time (IST)<input type="time" name="time" id="o_time" value="12:30" required></label>
+        <label>Minutes<select name="mins" id="o_mins">${minsOpts(60)}</select></label>
+        <label>Subject<input name="subject" id="o_subj" value="${esc((s.subjects||'').split(',')[0].trim())}"></label>
+        <label>Teacher<input name="teacher" id="o_teacher" value="${esc(s.teacher)}"></label>
+        <div class="row-end full"><button class="btn sm gold" type="submit">Add one-off class</button></div>
+      </form></details>
   </div>
 
-  <div class="card"><div class="head" style="margin-bottom:12px"><h3>Upcoming classes</h3><span class="soft">${up.length}</span></div>
-    ${up.length?up.map(c=>classCard(c,s)).join(''):'<div class="empty">No upcoming classes. Schedule one above.</div>'}</div>
+  <div class="card"><div class="head" style="margin-bottom:12px"><h3>Upcoming classes</h3><span class="soft">next 2 weeks</span></div>
+    ${up.length?up.map(c=>classCard(c,s,false)).join(''):'<div class="empty">No upcoming classes. Add days to the weekly timetable above.</div>'}</div>
   <div class="card"><div class="head" style="margin-bottom:12px"><h3>Past classes</h3><span class="soft">${past.length} · mark attendance and add notes</span></div>
-    ${past.length?past.map(c=>classCard(c,s)).join(''):'<div class="empty">No past classes yet.</div>'}</div>`;
+    ${past.length?past.map(c=>classCard(c,s,true)).join(''):'<div class="empty">No past classes yet.</div>'}</div>`;
   updPrev();
 }
 function updPrev(){
-  const s=STU.find(x=>x.id===CUR),d=$('#c_date')?.value,t=$('#c_time')?.value;if(!s||!d||!t)return;
-  try{$('#c_prev').textContent=`That is ${fmt(istToUtc(d,t),s.tz||IST)} for ${s.name}.`}catch(_){}
+  const s=STU.find(x=>x.id===CUR),t=$('#c_time')?.value,el=$('#c_prev');if(!s||!t||!el)return;
+  const days=[...document.querySelectorAll('#addSlot input[name=day]:checked')].map(x=>+x.value);
+  if(!days.length){el.textContent='Pick the days, for example Tuesday and Saturday.';return}
+  el.textContent=`For ${s.name}: `+days.map(wd=>new Intl.DateTimeFormat('en-IN',{timeZone:s.tz||IST,weekday:'short',hour:'numeric',minute:'2-digit'}).format(new Date(istToUtc(nextDate(wd),t)))).join(', ')+' (her time), every week.';
 }
 
-document.addEventListener('input',e=>{if(e.target.id==='c_date'||e.target.id==='c_time')updPrev()});
+document.addEventListener('input',e=>{if(e.target.id==='c_time'||e.target.name==='day')updPrev()});
+document.addEventListener('change',e=>{if(e.target.name==='day')updPrev()});
 document.addEventListener('click',async e=>{
   const t=e.target;
   const stu=t.closest('[data-stu]');if(stu){CUR=stu.dataset.stu;CREDS=null;renderList();loadClasses();return}
@@ -243,7 +288,9 @@ document.addEventListener('click',async e=>{
     if(STU.find(x=>x.id===CUR)?.has_pw&&!b.classList.contains('arm')){b.classList.add('arm');b.textContent='Confirm: old password stops working';return}
     try{b.disabled=true;CREDS=await api(`/api/admin/students/${CUR}/password`,'POST');await loadStudents(true)}catch(err){toast(err.message)}return}
   const st=t.closest('.st button');if(st){
-    const f=st.closest('[data-cls]');try{await api('/api/admin/classes/'+f.dataset.cls,'PATCH',{status:st.dataset.s});f.querySelectorAll('.st button').forEach(x=>x.setAttribute('aria-pressed',x===st));toast('Marked '+st.dataset.s)}catch(err){toast(err.message)}return}
+    const f=st.closest('[data-key]');try{const j=await api('/api/admin/occ','PATCH',{key:f.dataset.key,status:st.dataset.s});f.dataset.key=j.key;f.querySelectorAll('.st button').forEach(x=>x.setAttribute('aria-pressed',x===st));toast(st.dataset.s==='cancelled'?'Cancelled for this week':'Saved: '+st.textContent)}catch(err){toast(err.message)}return}
+  const ss=t.closest('[data-stopslot]');if(ss){if(!ss.classList.contains('arm')){ss.classList.add('arm');ss.textContent='Confirm stop';return}
+    try{await api('/api/admin/slots/'+ss.dataset.stopslot+'/stop','POST');toast('Stopped. Past classes are kept.');await loadStudents(true)}catch(err){toast(err.message)}return}
   const dc=t.closest('[data-delcls]');if(dc){if(!dc.classList.contains('arm')){dc.classList.add('arm');dc.textContent='Confirm delete';return}
     try{await api('/api/admin/classes/'+dc.dataset.delcls,'DELETE');toast('Class deleted');await loadClasses();loadStudents(true)}catch(err){toast(err.message)}return}
   const ds=t.closest('[data-delstu]');if(ds){if(!ds.classList.contains('arm')){ds.classList.add('arm');ds.textContent='Confirm: delete student and all classes';return}
@@ -257,10 +304,12 @@ document.addEventListener('submit',async e=>{
     if(f.id==='loginForm'){
       const j=await api('/api/admin/login','POST',{password:$('#a_pw').value});setTok(j.token);$('#a_pw').value='';$('#loginErr').hidden=true;show();return}
     if(f.id==='profForm'){await api('/api/admin/students/'+CUR,'PATCH',d);toast('Profile saved');await loadStudents(true);return}
-    if(f.id==='addCls'){const j=await api('/api/admin/classes','POST',{student_id:CUR,start_utc:istToUtc(d.date,d.time),mins:d.mins,subject:d.subject,teacher:d.teacher,repeat:d.repeat});toast(j.added>1?j.added+' classes added':'Class added');await loadStudents(true);return}
+    if(f.id==='addSlot'){const days=new FormData(f).getAll('day').map(Number);const j=await api('/api/admin/slots','POST',{student_id:CUR,days,time:d.time,mins:d.mins,subject:d.subject,teacher:d.teacher,start_date:d.start_date});toast(j.added+(j.added>1?' days added':' day added')+' to the timetable');await loadStudents(true);return}
+    if(f.id==='addOne'){await api('/api/admin/classes','POST',{student_id:CUR,start_utc:istToUtc(d.date,d.time),mins:d.mins,subject:d.subject,teacher:d.teacher,repeat:1});toast('One-off class added');await loadStudents(true);return}
+    if(f.dataset.slot){await api('/api/admin/slots/'+f.dataset.slot,'PATCH',{weekday:+d.weekday,time:d.time,mins:d.mins,subject:d.subject,teacher:d.teacher});toast('Timetable updated from today');await loadStudents(true);return}
     if(f.id==='newStu'){const j=await api('/api/admin/students','POST',d);CUR=j.id;CREDS=j;await loadStudents(true);return}
     if(f.id==='pwForm'){const j=await api('/api/admin/password','POST',d);setTok(j.token);toast('Password changed');renderPanel();return}
-    if(f.dataset.cls){const p={topic:d.topic,homework:d.homework,note:d.note,subject:d.subject,teacher:d.teacher,mins:d.mins};if(d.date&&d.time)p.start_utc=istToUtc(d.date,d.time);await api('/api/admin/classes/'+f.dataset.cls,'PATCH',p);toast('Class saved');await loadClasses();return}
+    if(f.dataset.key){const p={key:f.dataset.key,topic:d.topic,homework:d.homework,note:d.note,subject:d.subject,teacher:d.teacher,mins:d.mins};if(d.date&&d.time)p.start_utc=istToUtc(d.date,d.time);await api('/api/admin/occ','PATCH',p);toast('Class saved');await loadClasses();return}
   }catch(err){if(f.id==='loginForm'){$('#loginErr').hidden=false;$('#loginErr').textContent=err.message}else toast(err.message)}
   finally{if(b)b.disabled=false}
 });
